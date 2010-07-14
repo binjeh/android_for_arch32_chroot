@@ -1,0 +1,119 @@
+#!/bin/sh
+
+SCWD=`pwd`
+
+echo "This script assumes you are running a current version of Arch Linux."
+echo ""
+echo "To continue, you must type \"IWANTCHROOT\" to continue."
+echo "Anything else will cancel."
+echo ""
+read chrootyes
+
+if [ "$chrootyes" = "IWANTCHROOT" ]; then
+  if [ "`whoami`" != "root" ]; then
+    echo "You must be root to run this script."
+    exit 1
+  fi
+  if [ "`which sudo `" != "/usr/bin/sudo" ]; then
+    echo "You must have sudo installed and configured correctly."
+    exit 1
+  fi
+  if [ -d /opt/arch32 ]; then
+    echo "/opt/arch32 already exists.  Please rename or remove and try again."
+    exit 1
+  fi
+
+  echo "Creating /opt/arch32"
+  mkdir -p /opt/arch32
+
+  echo "Creating Temporary Pacman"
+  sed -e 's/x86\_64/i686/g' /etc/pacman.d/mirrorlist > /opt/arch32/mirrorlist
+  sed -e 's@/etc/pacman.d/mirrorlist@/opt/arch32/mirrorlist@g' /etc/pacman.conf > /opt/arch32/pacman.conf
+  sed -e 's@Architecture = auto@Architecture = i686@g' /opt/arch32/pacman.conf > /opt/arch32/pacman.conf.new
+  rm /opt/arch32/pacman.conf
+  mv /opt/arch32/pacman.conf.new /opt/arch32/pacman.conf
+
+  echo "Building Initial Directory Structure"
+  mkdir -p /opt/arch32/var/{cache/pacman/pkg,lib/pacman,lib/dbus}
+
+  echo "Syncronizing Initial Databases"
+  echo ""
+  pacman --root /opt/arch32 --cachedir /opt/arch32/var/cache/pacman/pkg --config /opt/arch32/pacman.conf -Sy
+  echo ""
+
+  echo "Installing Extreme Minimal CHROOT Install"
+  echo ""
+  pacman --root /opt/arch32 --cachedir /opt/arch32/var/cache/pacman/pkg --config /opt/arch32/pacman.conf -S \
+         filesystem licenses bash sed coreutils gzip sudo kernel26-headers pacman
+  echo ""
+
+  echo "Setting Up Configuration Files"
+  cd /opt/arch32/etc
+  ln -f /etc/passwd* . > /dev/null 2>&1
+  ln -f /etc/shadow* . > /dev/null 2>&1
+  ln -f /etc/group* . > /dev/null 2>&1
+  ln -f /etc/sudoers . > /dev/null 2>&1
+  ln -f /etc/rc.conf . > /dev/null 2>&1
+  ln -f /etc/resolv.conf . > /dev/null 2>&1
+  ln -f /etc/localtime . > /dev/null 2>&1
+  ln -f /etc/locale.gen . > /dev/null 2>&1
+  ln -f /etc/profile.d/locale.sh profile.d > /dev/null 2>&1
+  cp /etc/vimrc . > /dev/null 2>&1
+  cp /etc/mtab . > /dev/null 2>&1
+  echo "1" > chroot
+  sed -e 's@Architecture = auto@Architecture = i686@g' pacman.conf > pacman.conf.new
+  rm pacman.conf
+  mv pacman.conf.new pacman.conf
+  cd pacman.d
+  rm mirrorlist
+  mv /opt/arch32/mirrorlist .
+  rm /opt/arch32/pacman.conf
+
+  echo "Adding jeagocom repo to pacman.conf"
+  cd /opt/arch32/etc
+  echo "[jeagocom]" >> pacman.conf
+  echo "Server = http://www.jeago.com/archrepo/\$arch" >> pacman.conf
+
+  echo "Integrating CHROOT Into Normal System"
+  cp $SCWD/arch32 /etc/rc.d
+  chmod +x /etc/rc.d/arch32
+
+  echo "Copying Android Integration Script into CHROOT"
+  cp $SCWD/andchroot /opt/arch32/usr/bin/andchroot
+  chmod +x /opt/arch32/usr/bin/andchroot
+
+  echo ""
+  cat << "EOT"
+**
+** Your CHROOT is setup in /opt/arch32
+**
+** You can start your chroot environment by starting the arch32 service
+** /etc/rc.d/arch32 start
+**
+** If you wish to have the environment run at startup, add arch32 to the
+** daemons line in /etc/rc.conf (at the bottom)
+**
+** It is helpful to add the following to your ~/.bashrc
+**
+** if [ -f /etc/chroot ]; then
+**   export PS1='[\u@arch32 \W]\$ '
+**   cd ~
+** fi
+**
+** alias startchroot="sudo chroot --userspec=1000:100  /opt/arch32"
+**
+** Replace 1000:100 with your userid and default groupid
+** You can find this in /etc/passwd
+** Default first user on the system is 1000:100
+**
+** If you added the above lines, you will need to log out and log back in.
+**
+** If you added the above lines and have already logged out and logged back in,
+** you can run startchroot
+**
+** If you are using this chroot to build an android system, log into your chroot
+** and su to root.  After obtaining root, run andchroot
+**
+EOT
+
+fi

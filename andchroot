@@ -1,0 +1,8 @@
+#!/bin/sh
+
+/usr/sbin/locale-gen
+
+pacman -Sy
+pacman -S base-devel ca-certificates ccache curl dash dnsutils jdk jre python \
+          pngcrush schedtool squashfs-tools unzip xz zip zlib which tzdata tcl \
+          tk tar sqlite3 sed pcre net-tools

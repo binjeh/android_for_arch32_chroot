@@ -1,0 +1,14 @@
+This sets up the ARCH32 chroot in Arch Linux.  This is a very basic chroot.
+
+If you wish to use this script, cd to this directory, and run the following
+commands as root.
+
+chmod +x setupchroot
+./setupchroot
+
+After following the instructions at the end, you can entre your chroot and run
+as root
+
+andchroot
+
+This should download all needed packages for building androind in your chroot
