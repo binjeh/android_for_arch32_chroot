@@ -12,3 +12,10 @@ as root
 andchroot
 
 This should download all needed packages for building androind in your chroot
+
+
+jeagocom repo info
+Add the following to /etc/pacman.conf
+
+[jeagocom]
+Server = http://www.jeago.com/archrepo/$arch
